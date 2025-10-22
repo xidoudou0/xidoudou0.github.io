@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓库物资查询</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        input { width: 100%; padding: 15px; font-size: 18px; margin-bottom: 10px; }
+        button { width: 100%; padding: 15px; font-size: 18px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>仓库物资查询</h2>
+        <input type="text" id="keyword" placeholder="输入编码或描述...">
+        <button onclick="search()">查询</button>
+        <table id="resultTable">
+            <tr>
+                <th>物资编码</th>
+                <th>描述</th>
+                <th>数量</th>
+                <th>货架号</th>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        // CSV文件的公开链接（替换为你的链接）
+        const csvUrl = "https://pan.baidu.com/s/1Nv0DMFYYHh8eMqrdc0zhvw"; // 此处替换为步骤2获取的链接
+        let data = []; // 存储解析后的物资数据
+
+        // 页面加载时读取CSV数据
+        window.onload = function() {
+            fetch(csvUrl)
+                .then(response => response.text())
+                .then(csvText => {
+                    // 解析CSV为数组（处理逗号和引号）
+                    const lines = csvText.split('\n');
+                    for (let i = 1; i < lines.length; i++) { // 跳过标题行（i=0）
+                        const line = lines[i].trim();
+                        if (line === "") continue;
+                        // 按引号分割（处理内容含逗号的情况）
+                        const parts = line.match(/"([^"]*)"/g).map(p => p.replace(/"/g, ''));
+                        if (parts.length === 4) {
+                            data.push({
+                                code: parts[0],    // 物资编码
+                                desc: parts[1],    // 描述
+                                quantity: parts[2], // 数量
+                                shelf: parts[3]    // 货架号
+                            });
+                        }
+                    }
+                })
+                .catch(error => console.error("读取CSV失败：", error));
+        };
+
+        // 查询功能
+        function search() {
+            const keyword = document.getElementById("keyword").value.trim().toLowerCase();
+            const table = document.getElementById("resultTable");
+            // 清空旧结果（保留表头）
+            while (table.rows.length > 1) table.deleteRow(1);
+
+            if (keyword === "") {
+                alert("请输入查询内容！");
+                return;
+            }
+
+            // 模糊查询（编码精确匹配，描述包含关键词）
+            const results = data.filter(item => 
+                item.code.toLowerCase() === keyword || 
+                item.desc.toLowerCase().includes(keyword)
+            );
+
+            // 显示结果
+            if (results.length === 0) {
+                const row = table.insertRow();
+                row.innerHTML = `<td colspan="4" style="text-align:center">未找到匹配信息</td>`;
+            } else {
+                results.forEach(item => {
+                    const row = table.insertRow();
+                    row.innerHTML = `
+                        <td>${item.code}</td>
+                        <td>${item.desc}</td>
+                        <td>${item.quantity}</td>
+                        <td>${item.shelf}</td>
+                    `;
+                });
+            }
+        }
+
+        // 按Enter键触发查询
+        document.getElementById("keyword").addEventListener("keydown", function(e) {
+            if (e.key === "Enter") search();
+        });
+    </script>
+</body>
+</html>
